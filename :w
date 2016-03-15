@@ -40,7 +40,6 @@ class WeRoBot(BaseRoBot):
     """
     def __init__(self, app=None, endpoint='werobot', rule=None, *args, **kwargs):
         super(WeRoBot, self).__init__(*args, **kwargs)
-        # 如果初始化进传入flask app, 调用init_app(), 否则需要手动调用
         if app is not None:
             self.init_app(app, endpoint=endpoint, rule=rule)
         else:
@@ -69,32 +68,30 @@ class WeRoBot(BaseRoBot):
         config = app.config
         token = self.token
         if token is None:
-            # config的类继承自字典, setdefault()属于字典的方法
-            # 如果键在字典中, setdefault()返回其值, 否则向字典中插入新键并设默认值
             token = config.setdefault('WEROBOT_TOKEN', 'none')
         if not check_token(token):
             raise AttributeError('%s is not a vailed WeChat Token.' % token)
-        # 设置werobot的访问地址, 默认为 '/wechat'
         if rule is None:
             rule = config.setdefault('WEROBOT_ROLE', '/wechat')
 
+        if not check_token(token):
+            raise AttributeError('%s is an invalid token.' % token)
         self.token = token
 
-        from flask import request, make_response, abort
+        from flask import request, make_response
 
         def handler():
+            if not self.check_signature(
+                    request.args.get('timestamp', ''),
+                    request.args.get('nonce', ''),
+                    request.args.get('signature', '')
+            ):
+                return 'Invalid Request.'
             if request.method == 'GET':
-                if not self.check_signature(
-                        request.args.get('timestamp', ''),
-                        request.args.get('nonce', ''),
-                        request.args.get('signature', '')
-                ):
-                    abort(404)
                 return request.args['echostr']
 
             body = request.data
             message = parse_user_msg(body)
-            # get_reply() return the reply object for given message
             reply = self.get_reply(message)
             if not reply:
                 return ''
