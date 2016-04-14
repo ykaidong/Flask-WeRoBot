@@ -83,14 +83,14 @@ class WeRoBot(BaseRoBot):
         from flask import request, make_response, abort
 
         def handler():
+            if not self.check_signature(
+                    request.args.get('timestamp', ''),
+                    request.args.get('nonce', ''),
+                    request.args.get('signature', '')
+            ):
+                return 'Invalid Request.'
             if request.method == 'GET':
-                if not self.check_signature(
-                        request.args.get('timestamp', ''),
-                        request.args.get('nonce', ''),
-                        request.args.get('signature', '')
-                ):
-                    abort(404)
-                return request.args['echostr']
+                return request.args('echostr')
 
             body = request.data
             message = parse_user_msg(body)
